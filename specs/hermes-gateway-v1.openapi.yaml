@@ -1,0 +1,568 @@
+openapi: 3.1.0
+info:
+  title: Hermes Gateway API
+  version: 1.0.0
+  summary: Async task gateway for Hermes worker routing in the hybrid Command/Hermes architecture
+  description: |
+    Machine-readable contract for the recommended Hermes gateway design.
+
+    Architecture:
+    - Command/OpenClaw/TaskFlow on VPS A
+    - Hermes gateway with logical workers on VPS B
+    - Tailscale-only HTTP between them
+
+    Command owns the canonical task ledger. Hermes executes work and echoes IDs.
+servers:
+  - url: http://hermes.tailnet.local
+    description: Example Tailscale-internal endpoint
+security:
+  - bearerAuth: []
+tags:
+  - name: health
+  - name: tasks
+paths:
+  /v1/health:
+    get:
+      tags: [health]
+      summary: Health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Gateway health and worker readiness
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /v1/tasks:
+    post:
+      tags: [tasks]
+      summary: Create or reuse a remote Hermes task
+      operationId: createTask
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XCommandFlowId'
+        - $ref: '#/components/parameters/XCommandTaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '202':
+          description: Task accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate/conflicting task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Worker unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/tasks/{remoteTaskId}:
+    get:
+      tags: [tasks]
+      summary: Get remote task status
+      operationId: getTask
+      parameters:
+        - $ref: '#/components/parameters/RemoteTaskId'
+      responses:
+        '200':
+          description: Current task state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatusResponse'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/tasks/{remoteTaskId}/cancel:
+    post:
+      tags: [tasks]
+      summary: Cancel a remote task
+      operationId: cancelTask
+      parameters:
+        - $ref: '#/components/parameters/RemoteTaskId'
+      responses:
+        '200':
+          description: Task cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelResponse'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Task already finished
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque shared secret
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Stable command-side dedupe key, usually <flowId>:<taskId>
+    XCommandFlowId:
+      name: X-Command-Flow-Id
+      in: header
+      required: true
+      schema:
+        type: string
+    XCommandTaskId:
+      name: X-Command-Task-Id
+      in: header
+      required: true
+      schema:
+        type: string
+    RemoteTaskId:
+      name: remoteTaskId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    Agent:
+      type: string
+      enum: [marketing, development, operations]
+    Priority:
+      type: string
+      enum: [low, medium, high, critical]
+    TaskStatus:
+      type: string
+      enum: [accepted, running, waiting, blocked, needs_review, completed, failed, cancelled]
+    CallbackEvent:
+      type: string
+      enum: [waiting, blocked, completed, failed, cancelled]
+    WaitKind:
+      type: string
+      enum: [command_reply, lionel_approval, missing_asset, external_dependency, worker_clarification]
+    Asset:
+      type: object
+      additionalProperties: false
+      required: [type, label, value]
+      properties:
+        type:
+          type: string
+          enum: [url, path, file, note, repo, doc]
+        label:
+          type: string
+        value:
+          type: string
+    Requester:
+      type: object
+      additionalProperties: false
+      required: [agent, sessionKey, user]
+      properties:
+        agent:
+          type: string
+        sessionKey:
+          type: string
+        user:
+          type: string
+    CommandRef:
+      type: object
+      additionalProperties: false
+      required: [flowId, taskId, requestedAt, requester]
+      properties:
+        flowId:
+          type: string
+        taskId:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+        requester:
+          $ref: '#/components/schemas/Requester'
+    Context:
+      type: object
+      additionalProperties: false
+      properties:
+        summary:
+          type: string
+        project:
+          type: string
+        notes:
+          type: array
+          items:
+            type: string
+    Approval:
+      type: object
+      additionalProperties: false
+      required: [required, kind]
+      properties:
+        required:
+          type: boolean
+        kind:
+          type: [string, 'null']
+    Callback:
+      type: object
+      additionalProperties: false
+      required: [mode, url, secret, events]
+      properties:
+        mode:
+          type: string
+          enum: [webhook]
+        url:
+          type: string
+          format: uri
+        secret:
+          type: string
+        events:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/CallbackEvent'
+    Echo:
+      type: object
+      additionalProperties: false
+      required: [flowId, taskId]
+      properties:
+        flowId:
+          type: string
+        taskId:
+          type: string
+    Progress:
+      type: object
+      additionalProperties: false
+      required: [percent, summary]
+      properties:
+        percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        summary:
+          type: string
+    WaitingState:
+      type: object
+      additionalProperties: false
+      required: [kind, summary]
+      properties:
+        kind:
+          $ref: '#/components/schemas/WaitKind'
+        summary:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+    ResultPayload:
+      type: object
+      additionalProperties: false
+      required: [summary, whatIDid, artifacts, evidence, blockers, needsFromCommand, recommendedNextStep]
+      properties:
+        summary:
+          type: string
+        whatIDid:
+          type: array
+          items:
+            type: string
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        evidence:
+          type: array
+          items:
+            type: string
+        blockers:
+          type: array
+          items:
+            type: string
+        needsFromCommand:
+          type: array
+          items:
+            type: string
+        recommendedNextStep:
+          type: string
+    ErrorObject:
+      type: object
+      additionalProperties: false
+      required: [code, message, retryable]
+      properties:
+        code:
+          type: string
+          enum:
+            - INVALID_AGENT
+            - INVALID_SCHEMA
+            - UNAUTHORIZED
+            - DUPLICATE_TASK
+            - TASK_NOT_FOUND
+            - TASK_ALREADY_FINISHED
+            - WORKER_UNAVAILABLE
+            - INTERNAL_ERROR
+        message:
+          type: string
+        retryable:
+          type: boolean
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, error]
+      properties:
+        schemaVersion:
+          type: string
+          const: hermes.error.v1
+        error:
+          $ref: '#/components/schemas/ErrorObject'
+    CreateTaskRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - command
+        - agent
+        - objective
+        - priority
+        - context
+        - assets
+        - constraints
+        - successCriteria
+        - approval
+        - callback
+      properties:
+        schemaVersion:
+          type: string
+          const: hermes.task.v1
+        command:
+          $ref: '#/components/schemas/CommandRef'
+        agent:
+          $ref: '#/components/schemas/Agent'
+        objective:
+          type: string
+        priority:
+          $ref: '#/components/schemas/Priority'
+        deadline:
+          type: [string, 'null']
+          format: date-time
+        context:
+          $ref: '#/components/schemas/Context'
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        constraints:
+          type: array
+          items:
+            type: string
+        successCriteria:
+          type: array
+          items:
+            type: string
+        approval:
+          $ref: '#/components/schemas/Approval'
+        callback:
+          $ref: '#/components/schemas/Callback'
+    AcceptedResponse:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, remoteTaskId, status, agent, deduped, acceptedAt, echo]
+      properties:
+        schemaVersion:
+          type: string
+          const: hermes.task.accepted.v1
+        remoteTaskId:
+          type: string
+        status:
+          type: string
+          const: accepted
+        agent:
+          $ref: '#/components/schemas/Agent'
+        deduped:
+          type: boolean
+        acceptedAt:
+          type: string
+          format: date-time
+        echo:
+          $ref: '#/components/schemas/Echo'
+    TaskStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - remoteTaskId
+        - status
+        - agent
+        - currentStep
+        - waiting
+        - blockers
+        - artifacts
+        - result
+        - error
+        - updatedAt
+        - echo
+      properties:
+        schemaVersion:
+          type: string
+          const: hermes.task.status.v1
+        remoteTaskId:
+          type: string
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        agent:
+          $ref: '#/components/schemas/Agent'
+        currentStep:
+          type: string
+        progress:
+          oneOf:
+            - $ref: '#/components/schemas/Progress'
+            - type: 'null'
+        waiting:
+          oneOf:
+            - $ref: '#/components/schemas/WaitingState'
+            - type: 'null'
+        blockers:
+          type: array
+          items:
+            type: string
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        result:
+          oneOf:
+            - $ref: '#/components/schemas/ResultPayload'
+            - type: 'null'
+        error:
+          oneOf:
+            - $ref: '#/components/schemas/ErrorObject'
+            - type: 'null'
+        updatedAt:
+          type: string
+          format: date-time
+        echo:
+          $ref: '#/components/schemas/Echo'
+    CancelResponse:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, remoteTaskId, status, cancelledAt, echo]
+      properties:
+        schemaVersion:
+          type: string
+          const: hermes.task.cancel.v1
+        remoteTaskId:
+          type: string
+        status:
+          type: string
+          const: cancelled
+        cancelledAt:
+          type: string
+          format: date-time
+        echo:
+          $ref: '#/components/schemas/Echo'
+    TaskEventCallback:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - event
+        - remoteTaskId
+        - status
+        - agent
+        - currentStep
+        - updatedAt
+        - echo
+        - waiting
+        - result
+        - error
+      properties:
+        schemaVersion:
+          type: string
+          const: hermes.task.event.v1
+        event:
+          $ref: '#/components/schemas/CallbackEvent'
+        remoteTaskId:
+          type: string
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        agent:
+          $ref: '#/components/schemas/Agent'
+        currentStep:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        echo:
+          $ref: '#/components/schemas/Echo'
+        waiting:
+          oneOf:
+            - $ref: '#/components/schemas/WaitingState'
+            - type: 'null'
+        result:
+          oneOf:
+            - $ref: '#/components/schemas/ResultPayload'
+            - type: 'null'
+        error:
+          oneOf:
+            - $ref: '#/components/schemas/ErrorObject'
+            - type: 'null'
+    HealthWorkers:
+      type: object
+      additionalProperties: false
+      required: [marketing, development, operations]
+      properties:
+        marketing:
+          type: string
+          enum: [ready, degraded, down]
+        development:
+          type: string
+          enum: [ready, degraded, down]
+        operations:
+          type: string
+          enum: [ready, degraded, down]
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, status, workers, time]
+      properties:
+        schemaVersion:
+          type: string
+          const: hermes.health.v1
+        status:
+          type: string
+          enum: [ok, degraded, down]
+        workers:
+          $ref: '#/components/schemas/HealthWorkers'
+        time:
+          type: string
+          format: date-time
+x-notes:
+  callbackContract:
+    description: Hermes should POST TaskEventCallback payloads back to the command callback URL on meaningful state transitions.

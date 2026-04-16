@@ -24,6 +24,10 @@
     "businessContext": {
       "type": "string"
     },
+    "executionMode": {
+      "type": "string",
+      "enum": ["standard", "claude_assisted"]
+    },
     "context": {
       "type": "object",
       "additionalProperties": false,

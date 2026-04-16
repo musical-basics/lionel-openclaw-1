@@ -75,6 +75,27 @@ Choose when the main output is:
 - prioritization
 - execution clarity
 
+## Execution mode selection
+
+After choosing the worker, decide whether the task should stay on the normal worker path or use a heavier helper path.
+
+Current rule:
+- default to `executionMode: standard`
+- for `development`, upgrade to `executionMode: claude_assisted` only when the task is clearly heavier, such as:
+  - explicit Claude request
+  - multi-file implementation
+  - repo-wide or codebase-wide analysis
+  - architectural/refactor/migration work
+  - deeper integration work where Claude materially helps
+
+When `claude_assisted` is selected, the development worker should use:
+
+```bash
+/home/openclaw/.openclaw/workspace/scripts/claude-development.sh
+```
+
+from the shared project workspace, then still verify and own the final result.
+
 ## Brief synthesis checklist
 
 Before dispatch, try to fill these fields:
@@ -84,6 +105,7 @@ Before dispatch, try to fill these fields:
 - `deliverable`
 - `priority`
 - `businessContext`
+- `executionMode`
 - `context.summary`
 - `context.project`
 - `context.background`
@@ -155,11 +177,12 @@ Do **not** ask follow-up for trivial missing details when a reasonable assumptio
 
 1. Decide whether the task should be delegated at all.
 2. Select the worker.
-3. Synthesize a structured brief.
-4. Run `prepare` to validate and inspect the resolved brief.
-5. Run `run` with the structured brief.
-6. Return the worker result clearly.
-7. If later TaskFlow is layered on top, wrap steps 4-6 in the flow lifecycle.
+3. Select `executionMode` (`standard` or `claude_assisted` when relevant).
+4. Synthesize a structured brief.
+5. Run `prepare` to validate and inspect the resolved brief.
+6. Run `run` with the structured brief.
+7. Return the worker result clearly.
+8. If later TaskFlow is layered on top, wrap steps 5-7 in the flow lifecycle.
 
 ## Example workflow
 
@@ -225,5 +248,6 @@ The auto-dispatch layer should feel like:
 - one inline synthesized brief
 - one deterministic prepare/validate step
 - one worker dispatch
+- and for heavier development tasks, an explicit Claude-assisted mode instead of an implicit guess inside the worker
 
 Not an extra mini-agent chain just to create the prompt.

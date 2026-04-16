@@ -62,6 +62,7 @@ The fields that matter most are:
 - `objective`
 - `deliverable`
 - `businessContext`
+- `executionMode`
 - `context`
 - `constraints`
 - `successCriteria`
@@ -110,6 +111,7 @@ python3 {baseDir}/scripts/hermes_local_client.py run <<'EOF'
   "deliverable": "Three hooks plus one recommended CTA.",
   "priority": "high",
   "businessContext": "Masterclass revenue matters more than extra polish right now.",
+  "executionMode": "standard",
   "context": {
     "summary": "Keep it premium, direct, and non-fluffy.",
     "project": "ultimate-pianist-masterclass",
@@ -165,10 +167,17 @@ EOF
 - `resolvedRequest`
 - `prompt`
 
+The local client now also resolves `executionMode`:
+- `standard`
+- `claude_assisted`
+
+For heavier development tasks, `claude_assisted` tells the worker to use `/home/openclaw/.openclaw/workspace/scripts/claude-development.sh` before returning its verified result.
+
 `run` returns normalized JSON with:
 
 - `transport`
 - `workerAgentId`
+- `executionMode`
 - `status`
 - `summary`
 - `parsed`

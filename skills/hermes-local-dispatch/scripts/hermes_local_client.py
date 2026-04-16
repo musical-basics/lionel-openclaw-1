@@ -12,6 +12,22 @@ MAIN_WORKSPACE = Path('/home/openclaw/.openclaw/workspace')
 REFERENCE_DIR = Path('/home/openclaw/.openclaw/workspace/skills/hermes-local-dispatch/references')
 SCHEMA_PATH = REFERENCE_DIR / 'worker-brief.schema.json'
 VALID_AGENTS = ('marketing', 'development', 'operations')
+EXECUTION_MODES = ('standard', 'claude_assisted')
+CLAUDE_DEVELOPMENT_LAUNCHER = '/home/openclaw/.openclaw/workspace/scripts/claude-development.sh'
+CLAUDE_ASSIST_KEYWORDS = (
+    'claude',
+    'sonnet',
+    'multi-file',
+    'repo-wide',
+    'codebase',
+    'architecture',
+    'architectural',
+    'refactor',
+    'migration',
+    'integrat',
+    'system-wide',
+    'cross-cutting',
+)
 SECTION_KEYS = [
     ('status', 'STATUS'),
     ('summary', 'SUMMARY'),
@@ -188,6 +204,16 @@ def normalize_list(value) -> list[str]:
     return result
 
 
+def normalize_execution_mode(value) -> str | None:
+    text = normalize_text(value)
+    if not text:
+        return None
+    mode = text.lower().replace('-', '_').replace(' ', '_')
+    if mode not in EXECUTION_MODES:
+        raise SystemExit(f'executionMode must be one of: {", ".join(EXECUTION_MODES)}')
+    return mode
+
+
 def merge_unique(*groups: list[str]) -> list[str]:
     merged: list[str] = []
     for group in groups:
@@ -228,6 +254,7 @@ def normalize_request(request: dict) -> dict:
         'deliverable': normalize_text(request.get('deliverable')),
         'priority': priority,
         'businessContext': normalize_text(request.get('businessContext')),
+        'executionMode': normalize_execution_mode(request.get('executionMode')),
         'context': normalized_context,
         'files': normalize_list(request.get('files')),
         'assets': normalize_list(request.get('assets')),
@@ -265,6 +292,51 @@ def command_template(agent: str) -> int:
     return 0
 
 
+def infer_execution_mode(request: dict) -> tuple[str, list[str]]:
+    if request['agent'] != 'development':
+        return 'standard', ['non-development tasks stay on the normal worker path']
+
+    explicit_mode = request.get('executionMode')
+    if explicit_mode:
+        return explicit_mode, [f'explicit executionMode override: {explicit_mode}']
+
+    text_parts = [
+        request['objective'],
+        request['deliverable'],
+        request['businessContext'],
+        request['context']['summary'],
+        request['context']['project'],
+        request['context']['background'],
+        request['context']['decisionContext'],
+        *request['context']['notes'],
+        *request['constraints'],
+        *request['successCriteria'],
+        *request['nonGoals'],
+        *request['requiredOutput'],
+        *request['questionsToAnswer'],
+    ]
+    haystack = ' '.join(part.lower() for part in text_parts if part)
+    score = 0
+    reasons: list[str] = []
+
+    keyword_hits = [keyword for keyword in CLAUDE_ASSIST_KEYWORDS if keyword in haystack]
+    if keyword_hits:
+        score += len(keyword_hits)
+        reasons.append(f'heavy-task language: {", ".join(keyword_hits[:4])}')
+
+    file_count = len(request['files'])
+    if file_count >= 3:
+        score += 2
+        reasons.append(f'{file_count} relevant files supplied')
+    elif file_count >= 2 and keyword_hits:
+        score += 1
+        reasons.append(f'{file_count} relevant files plus heavy-task language')
+
+    if score >= 2:
+        return 'claude_assisted', reasons
+    return 'standard', ['defaulted to direct development-worker execution']
+
+
 def resolve_request(request: dict) -> dict:
     normalized = normalize_request(request)
     agent = normalized['agent']
@@ -274,7 +346,18 @@ def resolve_request(request: dict) -> dict:
     resolved['successCriteria'] = merge_unique(normalized['successCriteria'], defaults['defaultSuccessCriteria'])
     resolved['requiredOutput'] = merge_unique(normalized['requiredOutput'], defaults['defaultRequiredOutput'])
     resolved['roleFocus'] = defaults['focus']
+    execution_mode, execution_reason = infer_execution_mode(normalized)
+    resolved['executionMode'] = execution_mode
+    resolved['executionModeReason'] = execution_reason
     resolved['toolingNotes'] = defaults.get('toolingNotes', [])
+    if execution_mode == 'claude_assisted':
+        resolved['toolingNotes'] = merge_unique(
+            resolved['toolingNotes'],
+            [
+                f'This request is flagged for Claude-assisted execution. Start from {MAIN_WORKSPACE} and use {CLAUDE_DEVELOPMENT_LAUNCHER} early unless you have a strong reason not to.',
+                'Use Claude as a coding copilot for repo analysis, multi-file implementation, or deeper debugging, then verify the final result yourself before reporting back to Command.',
+            ],
+        )
     return {
         'request': normalized,
         'resolvedRequest': resolved,
@@ -311,8 +394,13 @@ def build_prompt(request: dict) -> str:
         'TASK',
         f'Objective: {request["objective"]}',
         f'Priority: {request["priority"]}',
+        f'Execution mode: {resolved["executionMode"]}',
     ]
 
+    if resolved['executionModeReason']:
+        lines.append('')
+        lines.append('Execution mode rationale:')
+        lines.extend(f'- {item}' for item in resolved['executionModeReason'])
     if request['deliverable']:
         lines.extend(['', f'Deliverable: {request["deliverable"]}'])
     if request['businessContext']:
@@ -357,6 +445,14 @@ def build_prompt(request: dict) -> str:
         lines.append('')
         lines.append('Output emphasis for Command:')
         lines.extend(f'- {item}' for item in required_output)
+    if resolved['executionMode'] == 'claude_assisted':
+        lines.append('')
+        lines.append('Claude-assisted execution instructions:')
+        lines.extend([
+            f'- Use {CLAUDE_DEVELOPMENT_LAUNCHER} from {MAIN_WORKSPACE} as your Claude entrypoint for this task.',
+            '- Use Claude early for the heavier coding or analysis portion instead of waiting until the end.',
+            '- You still own the final judgment, verification, and structured report back to Command.',
+        ])
     if resolved['toolingNotes']:
         lines.append('')
         lines.append('Tooling notes:')
@@ -450,6 +546,7 @@ def run_worker(request: dict, timeout_seconds: int | None) -> dict:
     return {
         'transport': 'openclaw-local',
         'workerAgentId': normalized['agent'],
+        'executionMode': prepared['resolvedRequest'].get('executionMode'),
         'status': normalize_status(parsed, payload),
         'summary': parsed.get('summary') or payload.get('summary'),
         'parsed': parsed,

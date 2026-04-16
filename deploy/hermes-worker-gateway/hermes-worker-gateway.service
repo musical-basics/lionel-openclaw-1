@@ -1,0 +1,22 @@
+[Unit]
+Description=Hermes Worker Gateway
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+User=hermes
+Group=hermes
+WorkingDirectory=/home/hermes/worker-gateway
+Environment=HOME=/home/hermes
+Environment=PATH=/home/hermes/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=/home/hermes/worker-gateway/.env
+ExecStart=/usr/bin/python3 /home/hermes/worker-gateway/worker_gateway.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hermes-worker-gateway
+
+[Install]
+WantedBy=multi-user.target

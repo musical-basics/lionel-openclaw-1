@@ -146,6 +146,8 @@ def parse_args() -> argparse.Namespace:
     template_parser = sub.add_parser('template', help='Print a starter JSON worker brief template')
     template_parser.add_argument('agent', choices=VALID_AGENTS)
 
+    sub.add_parser('prepare', help='Validate/normalize a worker brief from JSON on stdin and print the resolved prompt bundle')
+
     run_parser = sub.add_parser('run', help='Run a worker task from JSON on stdin')
     run_parser.add_argument('--timeout-seconds', type=int, default=None)
 
@@ -258,19 +260,35 @@ def command_template(agent: str) -> int:
     return 0
 
 
-def build_prompt(request: dict) -> str:
-    request = normalize_request(request)
-    agent = request['agent']
+def resolve_request(request: dict) -> dict:
+    normalized = normalize_request(request)
+    agent = normalized['agent']
     defaults = ROLE_DEFAULTS[agent]
+    resolved = deepcopy(normalized)
+    resolved['constraints'] = merge_unique(normalized['constraints'], defaults['defaultConstraints'])
+    resolved['successCriteria'] = merge_unique(normalized['successCriteria'], defaults['defaultSuccessCriteria'])
+    resolved['requiredOutput'] = merge_unique(normalized['requiredOutput'], defaults['defaultRequiredOutput'])
+    resolved['roleFocus'] = defaults['focus']
+    return {
+        'request': normalized,
+        'resolvedRequest': resolved,
+    }
+
+
+def build_prompt(request: dict) -> str:
+    prepared = resolve_request(request)
+    request = prepared['request']
+    resolved = prepared['resolvedRequest']
+    agent = request['agent']
     context = request['context']
-    constraints = merge_unique(request['constraints'], defaults['defaultConstraints'])
-    success = merge_unique(request['successCriteria'], defaults['defaultSuccessCriteria'])
-    required_output = merge_unique(request['requiredOutput'], defaults['defaultRequiredOutput'])
+    constraints = resolved['constraints']
+    success = resolved['successCriteria']
+    required_output = resolved['requiredOutput']
 
     lines = [
         'You are receiving a delegated task from Command.',
         f'Work as the {agent} worker.',
-        f'Role focus: {defaults["focus"]}',
+        f'Role focus: {resolved["roleFocus"]}',
         'Return plain text with exactly these headings:',
         'STATUS:',
         'SUMMARY:',
@@ -398,9 +416,16 @@ def normalize_status(parsed: dict, payload: dict) -> str:
     return raw or 'unknown'
 
 
+def prepare_worker(request: dict) -> dict:
+    prepared = resolve_request(request)
+    prepared['prompt'] = build_prompt(prepared['request'])
+    return prepared
+
+
 def run_worker(request: dict, timeout_seconds: int | None) -> dict:
-    normalized = normalize_request(request)
-    prompt = build_prompt(normalized)
+    prepared = prepare_worker(request)
+    normalized = prepared['request']
+    prompt = prepared['prompt']
     cmd = ['openclaw', 'agent', '--agent', normalized['agent'], '--message', prompt, '--json']
     if timeout_seconds:
         cmd.extend(['--timeout', str(timeout_seconds)])
@@ -422,7 +447,15 @@ def run_worker(request: dict, timeout_seconds: int | None) -> dict:
         'runId': payload.get('runId'),
         'sessionId': (((payload.get('result') or {}).get('meta') or {}).get('agentMeta') or {}).get('sessionId'),
         'request': normalized,
+        'resolvedRequest': prepared['resolvedRequest'],
     }
+
+
+def command_prepare() -> int:
+    request = json.loads(sys.stdin.read())
+    result = prepare_worker(request)
+    print(json.dumps(result, indent=2))
+    return 0
 
 
 def command_run(timeout_seconds: int | None) -> int:
@@ -440,6 +473,8 @@ def main() -> int:
         return command_schema()
     if args.command == 'template':
         return command_template(args.agent)
+    if args.command == 'prepare':
+        return command_prepare()
     if args.command == 'run':
         return command_run(args.timeout_seconds)
     raise SystemExit(f'unknown command: {args.command}')

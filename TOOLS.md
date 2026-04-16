@@ -57,6 +57,8 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 - Local dispatch client: `skills/hermes-local-dispatch/scripts/hermes_local_client.py`
 - Worker brief reference: `skills/hermes-local-dispatch/references/worker-briefs.md`
 - Worker brief schema: `skills/hermes-local-dispatch/references/worker-brief.schema.json`
+- Auto-dispatch playbook: `skills/hermes-local-dispatch/references/auto-dispatch-playbook.md`
+- Deterministic prepare step: `python3 skills/hermes-local-dispatch/scripts/hermes_local_client.py prepare`
 - Direct invoke pattern: `openclaw agent --agent <worker> --message "..." --json`
 - Shared project workspace remains: `/home/openclaw/.openclaw/workspace`
 

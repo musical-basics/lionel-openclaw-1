@@ -52,6 +52,11 @@ ROLE_DEFAULTS = {
             'List files touched or inspected when relevant.',
             'Make the recommended next technical step explicit.',
         ],
+        'toolingNotes': [
+            'Claude Code is available only to the development worker via /home/openclaw/.openclaw/workspace/scripts/claude-development.sh.',
+            'Use Claude Code selectively for heavier coding, repo analysis, or multi-file implementation work when it materially helps.',
+            'Do not assume Claude Code is available to marketing or operations.',
+        ],
     },
     'operations': {
         'focus': 'Optimize for execution clarity, sequencing, and blocker visibility. Make the next action obvious.',
@@ -269,6 +274,7 @@ def resolve_request(request: dict) -> dict:
     resolved['successCriteria'] = merge_unique(normalized['successCriteria'], defaults['defaultSuccessCriteria'])
     resolved['requiredOutput'] = merge_unique(normalized['requiredOutput'], defaults['defaultRequiredOutput'])
     resolved['roleFocus'] = defaults['focus']
+    resolved['toolingNotes'] = defaults.get('toolingNotes', [])
     return {
         'request': normalized,
         'resolvedRequest': resolved,
@@ -351,6 +357,10 @@ def build_prompt(request: dict) -> str:
         lines.append('')
         lines.append('Output emphasis for Command:')
         lines.extend(f'- {item}' for item in required_output)
+    if resolved['toolingNotes']:
+        lines.append('')
+        lines.append('Tooling notes:')
+        lines.extend(f'- {item}' for item in resolved['toolingNotes'])
 
     lines.extend([
         '',

@@ -60,6 +60,9 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 - Auto-dispatch playbook: `skills/hermes-local-dispatch/references/auto-dispatch-playbook.md`
 - Deterministic prepare step: `python3 skills/hermes-local-dispatch/scripts/hermes_local_client.py prepare`
 - Direct invoke pattern: `openclaw agent --agent <worker> --message "..." --json`
+- Development-only Claude launcher: `scripts/claude-development.sh`
+- Development Claude writable home: `/home/openclaw/.openclaw/workspace/.openclaw/claude-development-home`
+- `scripts/claude-development.sh auth status` and `scripts/claude-development.sh -p "Reply with exactly: OK"` are the fastest smoke tests.
 - Shared project workspace remains: `/home/openclaw/.openclaw/workspace`
 
 ## Same-VPS local TaskFlow bridge

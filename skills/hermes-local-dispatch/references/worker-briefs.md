@@ -39,6 +39,7 @@ This is the richer shape the automatic dispatch layer should aim to fill:
   "deliverable": "Verified patch with root-cause summary and file list.",
   "priority": "high",
   "businessContext": "Checkout breakage directly hurts revenue, so conversion protection matters more than polish.",
+  "executionMode": "claude_assisted",
   "context": {
     "summary": "Users can add to cart, but the final payment action silently fails on iPhone Safari.",
     "project": "dreamplay-shop-2",
@@ -124,6 +125,16 @@ Examples:
 - revenue timing
 - keeping product positioning clean
 
+### `executionMode`
+Optional dispatcher override.
+
+Allowed values:
+- `standard`
+- `claude_assisted`
+
+Use this mainly for `development` when Command wants to force or preserve the Claude-assisted path.
+If omitted, the local dispatcher now infers it conservatively.
+
 ### `context`
 Project-specific details.
 
@@ -199,6 +210,7 @@ Usually include:
 - product/business rules that must remain true
 - verification expectations
 - non-goals to prevent refactor drift
+- `executionMode: claude_assisted` when the task is clearly heavy enough to benefit from Claude Code
 
 Good deliverables:
 - patch

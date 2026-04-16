@@ -40,12 +40,29 @@ Read these when you need to shape a better brief:
 
 - `references/worker-briefs.md`
 - `references/worker-brief.schema.json`
+- `references/auto-dispatch-playbook.md`
 
-The future automatic dispatch layer should fill those fields, especially:
+The automatic layer should work like this:
+
+1. synthesize the brief inline from the normal user request plus relevant business context
+2. validate and normalize it deterministically
+3. dispatch it to the selected worker
+
+So the local same-VPS auto-dispatch layer is **not**:
+- raw deterministic parsing only
+- a separate extra worker-generation pass
+
+It **is**:
+- inline brief synthesis in Command
+- deterministic validation via the local client
+- then normal worker dispatch
+
+The fields that matter most are:
 
 - `objective`
 - `deliverable`
 - `businessContext`
+- `executionMode`
 - `context`
 - `constraints`
 - `successCriteria`
@@ -73,6 +90,17 @@ Print a starter template for one worker:
 python3 {baseDir}/scripts/hermes_local_client.py template development
 ```
 
+Prepare a brief deterministically before dispatch:
+
+```bash
+python3 {baseDir}/scripts/hermes_local_client.py prepare <<'EOF'
+{
+  "agent": "development",
+  "objective": "Audit the DreamPlay product page for tier confusion."
+}
+EOF
+```
+
 Run a worker task:
 
 ```bash
@@ -83,6 +111,7 @@ python3 {baseDir}/scripts/hermes_local_client.py run <<'EOF'
   "deliverable": "Three hooks plus one recommended CTA.",
   "priority": "high",
   "businessContext": "Masterclass revenue matters more than extra polish right now.",
+  "executionMode": "standard",
   "context": {
     "summary": "Keep it premium, direct, and non-fluffy.",
     "project": "ultimate-pianist-masterclass",
@@ -132,10 +161,23 @@ EOF
 
 ## Output handling
 
-The client returns normalized JSON with:
+`prepare` returns:
+
+- `request`
+- `resolvedRequest`
+- `prompt`
+
+The local client now also resolves `executionMode`:
+- `standard`
+- `claude_assisted`
+
+For heavier development tasks, `claude_assisted` tells the worker to use `/home/openclaw/.openclaw/workspace/scripts/claude-development.sh` before returning its verified result.
+
+`run` returns normalized JSON with:
 
 - `transport`
 - `workerAgentId`
+- `executionMode`
 - `status`
 - `summary`
 - `parsed`
@@ -143,6 +185,7 @@ The client returns normalized JSON with:
 - `runId`
 - `sessionId`
 - `request`
+- `resolvedRequest`
 
 Important terminal states:
 

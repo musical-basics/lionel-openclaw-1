@@ -12,6 +12,22 @@ MAIN_WORKSPACE = Path('/home/openclaw/.openclaw/workspace')
 REFERENCE_DIR = Path('/home/openclaw/.openclaw/workspace/skills/hermes-local-dispatch/references')
 SCHEMA_PATH = REFERENCE_DIR / 'worker-brief.schema.json'
 VALID_AGENTS = ('marketing', 'development', 'operations')
+EXECUTION_MODES = ('standard', 'claude_assisted')
+CLAUDE_DEVELOPMENT_LAUNCHER = '/home/openclaw/.openclaw/workspace/scripts/claude-development.sh'
+CLAUDE_ASSIST_KEYWORDS = (
+    'claude',
+    'sonnet',
+    'multi-file',
+    'repo-wide',
+    'codebase',
+    'architecture',
+    'architectural',
+    'refactor',
+    'migration',
+    'integrat',
+    'system-wide',
+    'cross-cutting',
+)
 SECTION_KEYS = [
     ('status', 'STATUS'),
     ('summary', 'SUMMARY'),
@@ -51,6 +67,11 @@ ROLE_DEFAULTS = {
         'defaultRequiredOutput': [
             'List files touched or inspected when relevant.',
             'Make the recommended next technical step explicit.',
+        ],
+        'toolingNotes': [
+            'Claude Code is available only to the development worker via /home/openclaw/.openclaw/workspace/scripts/claude-development.sh.',
+            'Use Claude Code selectively for heavier coding, repo analysis, or multi-file implementation work when it materially helps.',
+            'Do not assume Claude Code is available to marketing or operations.',
         ],
     },
     'operations': {
@@ -146,6 +167,8 @@ def parse_args() -> argparse.Namespace:
     template_parser = sub.add_parser('template', help='Print a starter JSON worker brief template')
     template_parser.add_argument('agent', choices=VALID_AGENTS)
 
+    sub.add_parser('prepare', help='Validate/normalize a worker brief from JSON on stdin and print the resolved prompt bundle')
+
     run_parser = sub.add_parser('run', help='Run a worker task from JSON on stdin')
     run_parser.add_argument('--timeout-seconds', type=int, default=None)
 
@@ -179,6 +202,16 @@ def normalize_list(value) -> list[str]:
         if text and text not in result:
             result.append(text)
     return result
+
+
+def normalize_execution_mode(value) -> str | None:
+    text = normalize_text(value)
+    if not text:
+        return None
+    mode = text.lower().replace('-', '_').replace(' ', '_')
+    if mode not in EXECUTION_MODES:
+        raise SystemExit(f'executionMode must be one of: {", ".join(EXECUTION_MODES)}')
+    return mode
 
 
 def merge_unique(*groups: list[str]) -> list[str]:
@@ -221,6 +254,7 @@ def normalize_request(request: dict) -> dict:
         'deliverable': normalize_text(request.get('deliverable')),
         'priority': priority,
         'businessContext': normalize_text(request.get('businessContext')),
+        'executionMode': normalize_execution_mode(request.get('executionMode')),
         'context': normalized_context,
         'files': normalize_list(request.get('files')),
         'assets': normalize_list(request.get('assets')),
@@ -258,19 +292,92 @@ def command_template(agent: str) -> int:
     return 0
 
 
-def build_prompt(request: dict) -> str:
-    request = normalize_request(request)
-    agent = request['agent']
+def infer_execution_mode(request: dict) -> tuple[str, list[str]]:
+    if request['agent'] != 'development':
+        return 'standard', ['non-development tasks stay on the normal worker path']
+
+    explicit_mode = request.get('executionMode')
+    if explicit_mode:
+        return explicit_mode, [f'explicit executionMode override: {explicit_mode}']
+
+    text_parts = [
+        request['objective'],
+        request['deliverable'],
+        request['businessContext'],
+        request['context']['summary'],
+        request['context']['project'],
+        request['context']['background'],
+        request['context']['decisionContext'],
+        *request['context']['notes'],
+        *request['constraints'],
+        *request['successCriteria'],
+        *request['nonGoals'],
+        *request['requiredOutput'],
+        *request['questionsToAnswer'],
+    ]
+    haystack = ' '.join(part.lower() for part in text_parts if part)
+    score = 0
+    reasons: list[str] = []
+
+    keyword_hits = [keyword for keyword in CLAUDE_ASSIST_KEYWORDS if keyword in haystack]
+    if keyword_hits:
+        score += len(keyword_hits)
+        reasons.append(f'heavy-task language: {", ".join(keyword_hits[:4])}')
+
+    file_count = len(request['files'])
+    if file_count >= 3:
+        score += 2
+        reasons.append(f'{file_count} relevant files supplied')
+    elif file_count >= 2 and keyword_hits:
+        score += 1
+        reasons.append(f'{file_count} relevant files plus heavy-task language')
+
+    if score >= 2:
+        return 'claude_assisted', reasons
+    return 'standard', ['defaulted to direct development-worker execution']
+
+
+def resolve_request(request: dict) -> dict:
+    normalized = normalize_request(request)
+    agent = normalized['agent']
     defaults = ROLE_DEFAULTS[agent]
+    resolved = deepcopy(normalized)
+    resolved['constraints'] = merge_unique(normalized['constraints'], defaults['defaultConstraints'])
+    resolved['successCriteria'] = merge_unique(normalized['successCriteria'], defaults['defaultSuccessCriteria'])
+    resolved['requiredOutput'] = merge_unique(normalized['requiredOutput'], defaults['defaultRequiredOutput'])
+    resolved['roleFocus'] = defaults['focus']
+    execution_mode, execution_reason = infer_execution_mode(normalized)
+    resolved['executionMode'] = execution_mode
+    resolved['executionModeReason'] = execution_reason
+    resolved['toolingNotes'] = defaults.get('toolingNotes', [])
+    if execution_mode == 'claude_assisted':
+        resolved['toolingNotes'] = merge_unique(
+            resolved['toolingNotes'],
+            [
+                f'This request is flagged for Claude-assisted execution. Start from {MAIN_WORKSPACE} and use {CLAUDE_DEVELOPMENT_LAUNCHER} early unless you have a strong reason not to.',
+                'Use Claude as a coding copilot for repo analysis, multi-file implementation, or deeper debugging, then verify the final result yourself before reporting back to Command.',
+            ],
+        )
+    return {
+        'request': normalized,
+        'resolvedRequest': resolved,
+    }
+
+
+def build_prompt(request: dict) -> str:
+    prepared = resolve_request(request)
+    request = prepared['request']
+    resolved = prepared['resolvedRequest']
+    agent = request['agent']
     context = request['context']
-    constraints = merge_unique(request['constraints'], defaults['defaultConstraints'])
-    success = merge_unique(request['successCriteria'], defaults['defaultSuccessCriteria'])
-    required_output = merge_unique(request['requiredOutput'], defaults['defaultRequiredOutput'])
+    constraints = resolved['constraints']
+    success = resolved['successCriteria']
+    required_output = resolved['requiredOutput']
 
     lines = [
         'You are receiving a delegated task from Command.',
         f'Work as the {agent} worker.',
-        f'Role focus: {defaults["focus"]}',
+        f'Role focus: {resolved["roleFocus"]}',
         'Return plain text with exactly these headings:',
         'STATUS:',
         'SUMMARY:',
@@ -287,8 +394,13 @@ def build_prompt(request: dict) -> str:
         'TASK',
         f'Objective: {request["objective"]}',
         f'Priority: {request["priority"]}',
+        f'Execution mode: {resolved["executionMode"]}',
     ]
 
+    if resolved['executionModeReason']:
+        lines.append('')
+        lines.append('Execution mode rationale:')
+        lines.extend(f'- {item}' for item in resolved['executionModeReason'])
     if request['deliverable']:
         lines.extend(['', f'Deliverable: {request["deliverable"]}'])
     if request['businessContext']:
@@ -333,6 +445,18 @@ def build_prompt(request: dict) -> str:
         lines.append('')
         lines.append('Output emphasis for Command:')
         lines.extend(f'- {item}' for item in required_output)
+    if resolved['executionMode'] == 'claude_assisted':
+        lines.append('')
+        lines.append('Claude-assisted execution instructions:')
+        lines.extend([
+            f'- Use {CLAUDE_DEVELOPMENT_LAUNCHER} from {MAIN_WORKSPACE} as your Claude entrypoint for this task.',
+            '- Use Claude early for the heavier coding or analysis portion instead of waiting until the end.',
+            '- You still own the final judgment, verification, and structured report back to Command.',
+        ])
+    if resolved['toolingNotes']:
+        lines.append('')
+        lines.append('Tooling notes:')
+        lines.extend(f'- {item}' for item in resolved['toolingNotes'])
 
     lines.extend([
         '',
@@ -398,9 +522,16 @@ def normalize_status(parsed: dict, payload: dict) -> str:
     return raw or 'unknown'
 
 
+def prepare_worker(request: dict) -> dict:
+    prepared = resolve_request(request)
+    prepared['prompt'] = build_prompt(prepared['request'])
+    return prepared
+
+
 def run_worker(request: dict, timeout_seconds: int | None) -> dict:
-    normalized = normalize_request(request)
-    prompt = build_prompt(normalized)
+    prepared = prepare_worker(request)
+    normalized = prepared['request']
+    prompt = prepared['prompt']
     cmd = ['openclaw', 'agent', '--agent', normalized['agent'], '--message', prompt, '--json']
     if timeout_seconds:
         cmd.extend(['--timeout', str(timeout_seconds)])
@@ -415,6 +546,7 @@ def run_worker(request: dict, timeout_seconds: int | None) -> dict:
     return {
         'transport': 'openclaw-local',
         'workerAgentId': normalized['agent'],
+        'executionMode': prepared['resolvedRequest'].get('executionMode'),
         'status': normalize_status(parsed, payload),
         'summary': parsed.get('summary') or payload.get('summary'),
         'parsed': parsed,
@@ -422,7 +554,15 @@ def run_worker(request: dict, timeout_seconds: int | None) -> dict:
         'runId': payload.get('runId'),
         'sessionId': (((payload.get('result') or {}).get('meta') or {}).get('agentMeta') or {}).get('sessionId'),
         'request': normalized,
+        'resolvedRequest': prepared['resolvedRequest'],
     }
+
+
+def command_prepare() -> int:
+    request = json.loads(sys.stdin.read())
+    result = prepare_worker(request)
+    print(json.dumps(result, indent=2))
+    return 0
 
 
 def command_run(timeout_seconds: int | None) -> int:
@@ -440,6 +580,8 @@ def main() -> int:
         return command_schema()
     if args.command == 'template':
         return command_template(args.agent)
+    if args.command == 'prepare':
+        return command_prepare()
     if args.command == 'run':
         return command_run(args.timeout_seconds)
     raise SystemExit(f'unknown command: {args.command}')

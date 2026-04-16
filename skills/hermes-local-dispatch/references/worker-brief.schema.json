@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openclaw.local/skills/hermes-local-dispatch/worker-brief.schema.json",
+  "title": "Hermes Local Worker Brief",
+  "type": "object",
+  "required": ["agent", "objective"],
+  "additionalProperties": false,
+  "properties": {
+    "agent": {
+      "type": "string",
+      "enum": ["marketing", "development", "operations"]
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1
+    },
+    "deliverable": {
+      "type": "string"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "normal", "high", "urgent"]
+    },
+    "businessContext": {
+      "type": "string"
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "summary": { "type": "string" },
+        "project": { "type": "string" },
+        "background": { "type": "string" },
+        "decisionContext": { "type": "string" },
+        "notes": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "assets": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "constraints": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "successCriteria": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "nonGoals": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "requiredOutput": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "questionsToAnswer": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

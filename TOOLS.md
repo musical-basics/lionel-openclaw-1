@@ -55,6 +55,8 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
   - `/home/openclaw/.openclaw/workspace-operations`
 - Local dispatch skill: `skills/hermes-local-dispatch`
 - Local dispatch client: `skills/hermes-local-dispatch/scripts/hermes_local_client.py`
+- Worker brief reference: `skills/hermes-local-dispatch/references/worker-briefs.md`
+- Worker brief schema: `skills/hermes-local-dispatch/references/worker-brief.schema.json`
 - Direct invoke pattern: `openclaw agent --agent <worker> --message "..." --json`
 - Shared project workspace remains: `/home/openclaw/.openclaw/workspace`
 
@@ -64,7 +66,7 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 - Local TaskFlow route path: `/plugins/webhooks/hermes-local-taskflow`
 - Local TaskFlow URL: `http://127.0.0.1:19000/plugins/webhooks/hermes-local-taskflow`
 - Local untracked env file: `/home/openclaw/.openclaw/workspace/.env.hermes-local-taskflow`
-- Current bound owner session: `agent:main:telegram:direct:<redacted>`
+- Current bound owner session: `agent:main:telegram:direct:8155333249`
 - Controller id: `hermes-local/taskflow`
 - Canonical wiring doc: `HERMES-LOCAL-TASKFLOW-WIRING.md`
 

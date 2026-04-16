@@ -32,12 +32,45 @@ Do **not** delegate tiny tasks that are faster to do directly unless Lionel expl
 - `development` for coding, debugging, implementation, audits, refactors, technical plans, and verification.
 - `operations` for logistics, admin flows, checklists, sequencing, process docs, coordination, and follow-up planning.
 
+## Worker brief contract
+
+The local client now supports a richer worker brief contract, not just a thin objective string.
+
+Read these when you need to shape a better brief:
+
+- `references/worker-briefs.md`
+- `references/worker-brief.schema.json`
+
+The future automatic dispatch layer should fill those fields, especially:
+
+- `objective`
+- `deliverable`
+- `businessContext`
+- `context`
+- `constraints`
+- `successCriteria`
+- `nonGoals`
+- `requiredOutput`
+- `questionsToAnswer`
+
 ## Command examples
 
 List local workers:
 
 ```bash
 python3 {baseDir}/scripts/hermes_local_client.py list
+```
+
+Print the schema:
+
+```bash
+python3 {baseDir}/scripts/hermes_local_client.py schema
+```
+
+Print a starter template for one worker:
+
+```bash
+python3 {baseDir}/scripts/hermes_local_client.py template development
 ```
 
 Run a worker task:
@@ -47,35 +80,53 @@ python3 {baseDir}/scripts/hermes_local_client.py run <<'EOF'
 {
   "agent": "marketing",
   "objective": "Write 3 concise hero hooks for the masterclass waitlist page.",
+  "deliverable": "Three hooks plus one recommended CTA.",
   "priority": "high",
+  "businessContext": "Masterclass revenue matters more than extra polish right now.",
   "context": {
     "summary": "Keep it premium, direct, and non-fluffy.",
     "project": "ultimate-pianist-masterclass",
     "notes": ["Do not invent pricing.", "Do not publish anything."]
   },
   "constraints": ["Draft only."],
-  "successCriteria": ["Return 3 distinct hooks.", "Keep each hook short."]
+  "successCriteria": ["Return 3 distinct hooks.", "Keep each hook short enough for a hero section."],
+  "requiredOutput": ["Lead with the recommended option first."]
 }
 EOF
 ```
 
-## Request shape
+## Minimal request shape
 
-Expected JSON shape:
+```json
+{
+  "agent": "marketing",
+  "objective": "..."
+}
+```
+
+## Preferred request shape
 
 ```json
 {
   "agent": "marketing",
   "objective": "...",
+  "deliverable": "...",
   "priority": "high",
+  "businessContext": "...",
   "context": {
     "summary": "...",
     "project": "...",
+    "background": "...",
+    "decisionContext": "...",
     "notes": ["..."]
   },
+  "files": ["..."],
   "assets": ["..."],
   "constraints": ["..."],
-  "successCriteria": ["..."]
+  "successCriteria": ["..."],
+  "nonGoals": ["..."],
+  "requiredOutput": ["..."],
+  "questionsToAnswer": ["..."]
 }
 ```
 
@@ -91,6 +142,7 @@ The client returns normalized JSON with:
 - `rawText`
 - `runId`
 - `sessionId`
+- `request`
 
 Important terminal states:
 

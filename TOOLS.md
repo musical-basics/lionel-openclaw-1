@@ -37,4 +37,13 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 
 ---
 
+## Hermes worker gateway
+
+- Command-side bridge skill: `skills/hermes-dispatch`
+- Local client script: `skills/hermes-dispatch/scripts/hermes_gateway_client.py`
+- Local untracked env file path: `/home/openclaw/.openclaw/workspace/.env.hermes-gateway`
+- Gateway URL: `http://100.95.180.106:8788`
+- `GET /v1/health` does not require bearer auth, so it is the fastest smoke test from Command.
+- Task submission still requires the bearer token from Bot 2's `/home/hermes/worker-gateway/.env`.
+
 Add whatever helps you do your job. This is your cheat sheet.

@@ -26,7 +26,9 @@ Responsibilities:
 Current state:
 - live and working
 - semantic memory is enabled and verified
-- **not yet automatically wired** to dispatch real jobs into Hermes worker gateway
+- command-side bridge code now exists as a workspace skill + local client script
+- live health checks to the Hermes worker gateway from Command are verified
+- full task submission from Command is still pending local bearer-token wiring
 
 ### VPS B: Hermes worker box
 
@@ -224,6 +226,28 @@ Verified:
 So this is not just design work.
 The worker gateway is **actually live and responding**.
 
+## Command-side bridge status
+
+A first Command-side bridge now exists in the OpenClaw workspace:
+
+- skill: `skills/hermes-dispatch/SKILL.md`
+- client: `skills/hermes-dispatch/scripts/hermes_gateway_client.py`
+
+What it does now:
+- teaches Command when to hand work to `marketing`, `development`, or `operations`
+- provides a reusable local client for `health`, `submit`, `run`, `status`, `wait`, and `cancel`
+- auto-fills `schemaVersion`, `flowId`, `taskId`, and request metadata for normal dispatches
+- supports local untracked config via `/home/openclaw/.openclaw/workspace/.env.hermes-gateway`
+
+What was verified:
+- the skill loads in OpenClaw as `hermes-dispatch`
+- the client script passes Python compile checks
+- `health` works live from Command to `http://100.95.180.106:8788` and reports all 3 workers ready
+
+What is still blocked:
+- full submit/run testing from Command still needs the bearer token copied locally into the untracked env file
+- automatic TaskFlow-backed flow ownership is not added yet
+
 ## Files added locally in this repo
 
 Top-level docs:
@@ -242,6 +266,10 @@ Deployment artifacts:
 - `deploy/hermes-worker-gateway/development.SOUL.md`
 - `deploy/hermes-worker-gateway/operations.SOUL.md`
 - `deploy/hermes-worker-gateway/.env.example`
+
+Command-side bridge artifacts:
+- `skills/hermes-dispatch/SKILL.md`
+- `skills/hermes-dispatch/scripts/hermes_gateway_client.py`
 
 ## Operational commands
 

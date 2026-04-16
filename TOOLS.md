@@ -58,4 +58,14 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 - Direct invoke pattern: `openclaw agent --agent <worker> --message "..." --json`
 - Shared project workspace remains: `/home/openclaw/.openclaw/workspace`
 
+## Same-VPS local TaskFlow bridge
+
+- Local TaskFlow route id: `hermes-local-taskflow`
+- Local TaskFlow route path: `/plugins/webhooks/hermes-local-taskflow`
+- Local TaskFlow URL: `http://127.0.0.1:19000/plugins/webhooks/hermes-local-taskflow`
+- Local untracked env file: `/home/openclaw/.openclaw/workspace/.env.hermes-local-taskflow`
+- Current bound owner session: `agent:main:telegram:direct:8155333249`
+- Controller id: `hermes-local/taskflow`
+- Canonical wiring doc: `HERMES-LOCAL-TASKFLOW-WIRING.md`
+
 Add whatever helps you do your job. This is your cheat sheet.

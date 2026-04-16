@@ -161,3 +161,7 @@ The next clean improvement is:
 1. keep these 3 local workers as the default specialist layer
 2. add TaskFlow-owned dispatch/resume on top
 3. keep the remote Bot 2 gateway as optional overflow or separate-environment workers
+
+For the TaskFlow bridge wiring details, see:
+
+- `HERMES-LOCAL-TASKFLOW-WIRING.md`

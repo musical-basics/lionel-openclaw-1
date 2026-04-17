@@ -22,6 +22,7 @@
 - DreamPlay had 55 preorders and about $18K in preorder revenue, and that money is reserved for prototype/manufacturing work, not normal operations.
 - Important customer signal: the original 3-month delivery promise was missed, but after the delay notice zero customers cancelled and several upgraded by paying $200 more.
 - Tier 1 priorities are customer portal, preorder update emails, keyboard-credit integration with the masterclass funnel, conservative store maintenance, and communicating prototype progress when updates arrive.
+- Role mapping for DreamPlay work: this main assistant is Tier 1, and any delegated implementation worker is Tier 2.
 - Always escalate DreamPlay refunds, pricing changes, Stripe issues, customer complaints, public delivery timeline statements, and manufacturing decisions to Lionel.
 - DreamPlay is budget-constrained, and DreamPlay work should stay to about 20% of Lionel's total workload.
 

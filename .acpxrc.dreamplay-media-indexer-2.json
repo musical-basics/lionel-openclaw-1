@@ -1,0 +1,7 @@
+{
+  "agents": {
+    "claude": {
+      "command": "env PATH=/home/openclaw/.openclaw/workspace/.npm-global/bin:/usr/bin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/snap/bin npm_config_cache=/home/openclaw/.openclaw/workspace/.npm-cache TMPDIR=/home/openclaw/.openclaw/workspace/.npm-tmp /usr/bin/npx -y @zed-industries/claude-agent-acp@0.21.0"
+    }
+  }
+}

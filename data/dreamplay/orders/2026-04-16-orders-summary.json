@@ -1,0 +1,27 @@
+{
+  "snapshot_date": "2026-04-16",
+  "source_file": "data/dreamplay/orders/imports/2026-04-16-shopify-export.csv",
+  "normalized_file": "data/dreamplay/orders/2026-04-16-orders-normalized.csv",
+  "order_count": 56,
+  "total_paid_usd_sum": "28118.37",
+  "payment_type_counts": {
+    "half_reservation": 5,
+    "full_payment": 45,
+    "waitlist_reservation": 6
+  },
+  "financial_status_counts": {
+    "authorized": 1,
+    "paid": 54,
+    "partially_refunded": 1
+  },
+  "fulfillment_status_counts": {
+    "unfulfilled": 56
+  },
+  "business_rules": {
+    "amount_field_to_use": "Total",
+    "amount_field_meaning": "Actual amount the customer paid.",
+    "payment_classification_field": "Lineitem name",
+    "payment_classification_rule": "Use lineitem name to distinguish reservation vs full payment. 50% Reservation -> half_reservation, Waitlist Reservation -> waitlist_reservation, otherwise full_payment.",
+    "pricing_note": "Product prices were increased after some of these orders, so do not infer current pricing from older lineitem names or paid totals."
+  }
+}

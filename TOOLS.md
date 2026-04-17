@@ -75,4 +75,13 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 - Controller id: `hermes-local/taskflow`
 - Canonical wiring doc: `HERMES-LOCAL-TASKFLOW-WIRING.md`
 
+## Discord mention troubleshooting
+
+- For reliable bot-to-bot pings in Discord, use raw mention syntax with ids, not plain `@Openclaw X` text.
+- Reliable mentions in this server:
+  - Openclaw 1: `<@1494663087373160580>`
+  - Openclaw 2: `<@1494531954618536007>`
+  - Openclaw 3: `<@1494656974732656681>`
+- In the `#general` troubleshooting exchange on 2026-04-17, once raw mentions were used in the same message, cross-bot visibility worked as expected.
+
 Add whatever helps you do your job. This is your cheat sheet.

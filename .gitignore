@@ -1,6 +1,14 @@
 node_modules/
 .openclaw/
-memory/
+memory/.dreams/
 *.log
 .env
 .env.*
+.cache/
+.npm-cache/
+.npm-global/
+.npm-tmp/
+.tmp/
+.tmp-home/
+.pm2/
+.worker-tools/

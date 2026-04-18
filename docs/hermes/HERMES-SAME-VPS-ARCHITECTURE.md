@@ -164,4 +164,4 @@ The next clean improvement is:
 
 For the TaskFlow bridge wiring details, see:
 
-- `HERMES-LOCAL-TASKFLOW-WIRING.md`
+- `docs/hermes/HERMES-LOCAL-TASKFLOW-WIRING.md`

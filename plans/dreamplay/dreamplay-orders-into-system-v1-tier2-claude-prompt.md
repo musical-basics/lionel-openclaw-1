@@ -3,7 +3,7 @@
 You are the Tier 2 development worker for DreamPlay.
 
 Repo:
-`/home/openclaw/.openclaw/workspace/dreamplay-website-3`
+`/home/openclaw/.openclaw/workspace/projects/dreamplay-website-3`
 
 ## Required execution mode
 You must use Claude Code for the substantive coding pass on this task.
@@ -27,9 +27,9 @@ Use Claude Code well:
 - make Claude inspect existing portal/auth code before changing anything
 
 ## Read these first
-1. `/home/openclaw/.openclaw/workspace/specs/dreamplay-customer-portal-v1-tier1-spec.md`
-2. `/home/openclaw/.openclaw/workspace/specs/dreamplay-orders-into-system-v1-tier1-spec.md`
-3. `/home/openclaw/.openclaw/workspace/dreamplay-website-3/docs/REPO-CONTEXT.md`
+1. `/home/openclaw/.openclaw/workspace/plans/dreamplay/dreamplay-customer-portal-v1-tier1-spec.md`
+2. `/home/openclaw/.openclaw/workspace/plans/dreamplay/dreamplay-orders-into-system-v1-tier1-spec.md`
+3. `/home/openclaw/.openclaw/workspace/projects/dreamplay-website-3/docs/REPO-CONTEXT.md`
 
 ## Canonical local order snapshot for V1
 - `/home/openclaw/.openclaw/workspace/data/dreamplay/orders/imports/2026-04-16-shopify-export.csv`

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/musical-basics/lionel-openclaw-1/specs/hermes-task.v1.schema.json",
+  "$id": "https://github.com/musical-basics/lionel-openclaw-1/plans/hermes/hermes-task.v1.schema.json",
   "title": "Hermes Task Create Request",
   "description": "Standalone JSON Schema for POST /v1/tasks in the Hermes Gateway API.",
   "type": "object",

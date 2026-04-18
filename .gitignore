@@ -5,6 +5,7 @@ memory/.dreams/
 .env
 .env.*
 .cache/
+.claude-xdg/
 .npm-cache/
 .npm-global/
 .npm-tmp/
@@ -12,3 +13,4 @@ memory/.dreams/
 .tmp-home/
 .pm2/
 .worker-tools/
+/projects/

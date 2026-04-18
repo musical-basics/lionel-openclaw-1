@@ -208,9 +208,9 @@ Live endpoints:
 - `POST /v1/tasks/{id}/cancel`
 
 Contract docs:
-- `HERMES-GATEWAY-API-V1.md`
-- `specs/hermes-gateway-v1.openapi.yaml`
-- `specs/hermes-task.v1.schema.json`
+- `docs/hermes/HERMES-GATEWAY-API-V1.md`
+- `plans/hermes/hermes-gateway-v1.openapi.yaml`
+- `plans/hermes/hermes-task.v1.schema.json`
 
 ## End-to-end verification performed
 
@@ -250,14 +250,14 @@ What is still blocked:
 
 ## Files added locally in this repo
 
-Top-level docs:
-- `HERMES-ORCHESTRATION-V2.md`
-- `HERMES-GATEWAY-API-V1.md`
-- `HERMES-HYBRID-SETUP-RUNBOOK.md`
+Reference docs:
+- `docs/hermes/HERMES-ORCHESTRATION-V2.md`
+- `docs/hermes/HERMES-GATEWAY-API-V1.md`
+- `docs/hermes/HERMES-HYBRID-SETUP-RUNBOOK.md`
 
 Machine-readable specs:
-- `specs/hermes-gateway-v1.openapi.yaml`
-- `specs/hermes-task.v1.schema.json`
+- `plans/hermes/hermes-gateway-v1.openapi.yaml`
+- `plans/hermes/hermes-task.v1.schema.json`
 
 Deployment artifacts:
 - `deploy/hermes-worker-gateway/worker_gateway.py`

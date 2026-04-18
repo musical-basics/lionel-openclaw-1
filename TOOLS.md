@@ -73,7 +73,7 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 - Local untracked env file: `/home/openclaw/.openclaw/workspace/.env.hermes-local-taskflow`
 - Current bound owner session: `agent:main:telegram:direct:8155333249`
 - Controller id: `hermes-local/taskflow`
-- Canonical wiring doc: `HERMES-LOCAL-TASKFLOW-WIRING.md`
+- Canonical wiring doc: `docs/hermes/HERMES-LOCAL-TASKFLOW-WIRING.md`
 
 ## Discord mention troubleshooting
 

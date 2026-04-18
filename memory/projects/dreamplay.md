@@ -36,7 +36,7 @@ Role mapping for DreamPlay work: this main assistant is Tier 1, and any delegate
 DreamPlay Tier 1 priorities are customer portal, preorder update emails, keyboard-credit integration with the masterclass funnel, conservative store maintenance, and communicating prototype progress when updates arrive.
 Always escalate refunds, pricing changes, Stripe issues, customer complaints, public delivery timeline statements, and manufacturing decisions to Lionel.
 DreamPlay is budget-constrained, and DreamPlay work should stay to about 20% of Lionel's total workload.
-Canonical context lives in `DREAMPLAY-TIER1-CONTEXT.md`.
+Canonical context lives in `docs/dreamplay/DREAMPLAY-TIER1-CONTEXT.md`.
 
 ## Product rules
 

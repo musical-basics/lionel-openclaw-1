@@ -6,7 +6,7 @@ _Learn about the person you're helping. Update this as you go._
 - **What to call them:** Lionel
 - **Pronouns:** _(optional)_
 - **Timezone:** America/Los_Angeles
-- **Notes:** Prefers short status summaries over raw tool dumps. Likes direct, concise, practical communication with minimal fluff. Prefers one concrete next step at a time.
+- **Notes:** Prefers short status summaries over raw tool dumps. Likes direct, concise, practical communication with minimal fluff. Prefers one concrete next step at a time. When a concrete file is referenced for him to use, attach the file when possible instead of only naming the path or filename.
 
 ## Context
 

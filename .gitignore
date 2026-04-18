@@ -13,4 +13,8 @@ memory/.dreams/
 .tmp-home/
 .pm2/
 .worker-tools/
+__pycache__/
+*.pyc
+projects/*/node_modules/
+projects/*/.next/
 /projects/
